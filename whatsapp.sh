@@ -37,3 +37,49 @@ EOF
 chmod +x ${DESKTOP_FILE}
 echo "WhatsApp Web App has been successfully installed!"
 echo "You can find it in your application menu or with: ${APP_EXEC}"
+
+# Create keyboard shortcut (Super+W)
+echo ""
+echo "Setting up keyboard shortcut (Super+W)..."
+
+# Try to set shortcut via dconf (GNOME)
+if command -v dconf &> /dev/null; then
+    CUSTOM_KEYBINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+    KEYBINDING_PATH="${CUSTOM_KEYBINDINGS}/whatsapp-webapp/"
+    
+    # Get current custom keybindings
+    CURRENT_BINDINGS=$(dconf read ${CUSTOM_KEYBINDINGS})
+    
+    # Add new keybinding if not already present
+    if [[ ! "$CURRENT_BINDINGS" =~ "whatsapp-webapp" ]]; then
+        # Set the custom keybinding values
+        dconf write "${KEYBINDING_PATH}name" "'Open WhatsApp'" 2>/dev/null
+        dconf write "${KEYBINDING_PATH}command" "'${APP_EXEC}'" 2>/dev/null
+        dconf write "${KEYBINDING_PATH}binding" "'<Super>w'" 2>/dev/null
+        
+        echo "Keyboard shortcut (Super+W) has been set via GNOME Settings!"
+    else
+        echo "WhatsApp keyboard shortcut already exists."
+    fi
+elif command -v xbindkeys &> /dev/null; then
+    # Fallback: Use xbindkeys
+    XBINDKEYS_CONFIG="${HOME}/.xbindkeysrc"
+    
+    # Add binding to xbindkeys config if not present
+    if ! grep -q "whatsapp" "${XBINDKEYS_CONFIG}" 2>/dev/null; then
+        echo "" >> "${XBINDKEYS_CONFIG}"
+        echo "# WhatsApp Web App" >> "${XBINDKEYS_CONFIG}"
+        echo "\"${APP_EXEC}\"" >> "${XBINDKEYS_CONFIG}"
+        echo "  mod4 + w" >> "${XBINDKEYS_CONFIG}"
+        
+        # Restart xbindkeys
+        pkill xbindkeys 2>/dev/null
+        xbindkeys &
+        echo "Keyboard shortcut (Super+W) has been set via xbindkeys!"
+    else
+        echo "WhatsApp keyboard shortcut already exists in xbindkeys."
+    fi
+else
+    echo "Warning: No supported keyboard shortcut manager found (GNOME or xbindkeys)."
+    echo "Please manually bind Super+W to: ${APP_EXEC}"
+fi
